@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: n8n-spa
+    env: docker
+    plan: free
+
+  - type: web
+    name: evolution-api-test
+    env: docker
+    plan: free
+
+  - type: web
+    name: postgres-test
+    env: docker
+    plan: free
+
+  - type: web
+    name: redis-test
+    env: docker
+    plan: free
+

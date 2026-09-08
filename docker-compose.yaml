@@ -1,0 +1,99 @@
+services:
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n_spa
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    environment:
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: ${N8N_PORT}
+      N8N_PROTOCOL: ${N8N_PROTOCOL}
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      NODE_ENV: production
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - evolution-api-test
+    networks:
+      - evolution-test-network
+
+  evolution-api-test:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: evolution_api_test
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    env_file:
+      - .env
+    environment:
+      SERVER_URL: http://localhost:8081
+      AUTHENTICATION_API_KEY: Juanda_7426
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution_pass@postgres-test:5432/evolution
+      DATABASE_CONNECTION_CLIENT_NAME: evolution_test
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_HISTORIC: "true"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis-test:6379/1
+    volumes:
+      - evolution_instances_test:/evolution/instances
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    networks:
+      - evolution-test-network
+
+  postgres-test:
+    image: postgres:15
+    container_name: evolution_postgres_test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution_pass
+      POSTGRES_DB: evolution
+    volumes:
+      - postgres_data_test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - evolution-test-network
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: evolution_redis_test
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - evolution_redis_test:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - evolution-test-network
+
+volumes:
+  n8n_data:
+  evolution_instances_test:
+  postgres_data_test:
+  evolution_redis_test:
+
+networks:
+  evolution-test-network:
+    driver: bridge
